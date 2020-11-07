@@ -38,6 +38,16 @@ static unsigned char reverseByte(unsigned char b) {
    return b;
 }
 
+#ifndef BN_bn2binpad
+int BN_bn2binpad(const BIGNUM *in, uint8_t *out, int len) {
+  if (len < 0 ||
+      !BN_bn2bin_padded(out, (size_t)len, in)) {
+    return -1;
+  }
+  return len;
+}
+#endif
+
 int hash_md5(void *out, const void *in, const size_t in_len)
 {
     MD5_CTX md5;

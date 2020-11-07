@@ -1,0 +1,106 @@
+cc_library_shared {
+    name: "libdvnc_flinger",
+
+    srcs: [
+        "flinger/minicap.cpp",
+        "flinger/pf.cpp",
+        "flinger/flinger.cpp",
+    ],
+
+    local_include_dirs: [
+        "flinger",
+    ],
+
+    shared_libs: [
+        "libui",
+        "libgui",
+        "libutils",
+        "libbinder",
+        "liblog",
+    ],
+
+    product_variables: {
+        platform_sdk_version: {
+            // API level
+            cflags: ["-DPLATFORM_SDK_VERSION=%d"],
+        },
+    },
+}
+
+
+cc_binary {
+    name: "androidvncserver",
+
+    srcs: [
+        "vncserver/libvncserver/main.c",
+        "vncserver/libvncserver/rfbserver.c",
+        "vncserver/libvncserver/rfbregion.c",
+        "vncserver/libvncserver/auth.c",
+        "vncserver/libvncserver/sockets.c",
+        "vncserver/libvncserver/stats.c",
+        "vncserver/libvncserver/corre.c",
+        "vncserver/libvncserver/rfbssl_openssl.c",
+        "vncserver/libvncserver/hextile.c",
+        "vncserver/libvncserver/rre.c",
+        "vncserver/libvncserver/translate.c",
+        "vncserver/libvncserver/cutpaste.c",
+        "vncserver/libvncserver/httpd.c",
+        "vncserver/libvncserver/cursor.c",
+        "vncserver/libvncserver/font.c",
+        "vncserver/libvncserver/draw.c",
+        "vncserver/libvncserver/websockets.c",
+        "vncserver/libvncserver/ws_decode.c",
+        "vncserver/libvncserver/selbox.c",
+        "vncserver/libvncserver/cargs.c",
+        "vncserver/libvncserver/ultra.c",
+        "vncserver/libvncserver/scale.c",
+        "vncserver/libvncserver/zlib.c",
+        "vncserver/libvncserver/zrle.c",
+        "vncserver/libvncserver/zrleoutstream.c",
+        "vncserver/libvncserver/zrlepalettehelper.c",
+        "vncserver/libvncserver/tight.c",
+        "vncserver/common/crypto_openssl.c",
+        "vncserver/common/base64.c",
+        "vncserver/common/d3des.c",
+        "vncserver/common/vncauth.c",
+        "vncserver/common/minilzo.c",
+        "vncserver/common/zywrletemplate.c",
+        "vncserver/common/turbojpeg.c",
+        "droidvncserver.c",
+        "gui.c",
+        "inputMethods/input.c",
+        "screenMethods/adb.c",
+        "screenMethods/framebuffer.c",
+        "screenMethods/gralloc.c",
+        "screenMethods/flinger.c",
+        "suinput/suinput.c",
+    ],
+
+    local_include_dirs: [
+        "vncserver",
+        "vncserver/libvncserver",
+        "vncserver/common",
+        "vncserver/rfb",
+        "inputMethods",
+        "screenMethods",
+        "suinput",
+    ],
+
+    cflags: [
+        "-DLIBVNCSERVER_WITH_WEBSOCKETS",
+        "-DLIBVNCSERVER_HAVE_LIBPNG",
+        "-DLIBVNCSERVER_HAVE_ZLIB",
+        "-DLIBVNCSERVER_HAVE_LIBJPEG",
+    ],
+    
+    shared_libs: [
+        "liblog",
+        "libjpeg",
+        "libpng",
+        "libz",
+        "libssl",
+        "libcrypto",
+        "libdvnc_flinger",
+    ],
+
+}

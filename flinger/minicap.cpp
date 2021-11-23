@@ -20,16 +20,15 @@
 
 #include <private/gui/ComposerService.h>
 
-#include <ui/DisplayInfo.h>
+#include <ui/StaticDisplayInfo.h>
+#include <ui/DisplayMode.h>
 #include <ui/PixelFormat.h>
 #include <ui/Rect.h>
-#if (PLATFORM_SDK_VERSION == 30)
 #include <input/DisplayViewport.h>
-#include <ui/DisplayConfig.h>
 #include <ui/Rotation.h>
 #include <ui/Size.h>
 #include <ui/DisplayState.h>
-#endif /* PLATFORM_SDK_VERSION == 30 */
+
 
 #include "mcdebug.h"
 
@@ -284,13 +283,8 @@ private:
     MCINFO("Publishing virtual display");
     android::SurfaceComposerClient::Transaction t;
     t.setDisplaySurface(mVirtualDisplay, mBufferProducer);
-#if (PLATFORM_SDK_VERSION == 30)
     t.setDisplayProjection(mVirtualDisplay,
       android::ui::toRotation(android::DISPLAY_ORIENTATION_0), layerStackRect, visibleRect);
-#else
-    t.setDisplayProjection(mVirtualDisplay,
-      android::DISPLAY_ORIENTATION_0, layerStackRect, visibleRect);
-#endif /* PLATFORM_SDK_VERSION == 30 */
     t.setDisplayLayerStack(mVirtualDisplay, 0); // default stack
     t.apply();
 
@@ -353,26 +347,26 @@ private:
 
 int
 minicap_try_get_display_info(int32_t displayId, Minicap::DisplayInfo* info) {
-#if (PLATFORM_SDK_VERSION == 30)
+
   android::sp<android::IBinder> dpy = android::SurfaceComposerClient::getInternalDisplayToken();
 
-  android::DisplayInfo dInfo;
-  android::status_t getInfoError = android::SurfaceComposerClient::getDisplayInfo(dpy, &dInfo);
+  android::ui::StaticDisplayInfo dInfo;
+  android::status_t getInfoError = android::SurfaceComposerClient::getStaticDisplayInfo(dpy, &dInfo);
 
 
   if (getInfoError != android::NO_ERROR) {
-     MCERROR("SurfaceComposerClient::getDisplayInfo() failed: %s (%d)\n", error_name(getInfoError), getInfoError);
+     MCERROR("SurfaceComposerClient::getStaticDisplayInfo() failed: %s (%d)\n", error_name(getInfoError), getInfoError);
      return getInfoError;
   }
 
 
-  android::DisplayConfig dConfig;
-  android::status_t err = android::SurfaceComposerClient::getActiveDisplayConfig(dpy, &dConfig);
+  android::ui::DisplayMode dConfig;
+  android::status_t err = android::SurfaceComposerClient::getActiveDisplayMode(dpy, &dConfig);
   if (err != android::NO_ERROR) {
-     MCERROR("SurfaceComposerClient::getActiveDisplayConfig() failed: %s (%d)\n", error_name(err), err);
+     MCERROR("SurfaceComposerClient::getActiveDisplayMode() failed: %s (%d)\n", error_name(err), err);
      return err;
   }
-  
+
   android::ui::DisplayState displayState;
   android::status_t displayStateErr = android::SurfaceComposerClient::getDisplayState(dpy, &displayState);
   if (displayStateErr != android::NO_ERROR) {
@@ -380,7 +374,7 @@ minicap_try_get_display_info(int32_t displayId, Minicap::DisplayInfo* info) {
      return displayStateErr;
   }
 
-  
+
   android::ui::Size& resolution = dConfig.resolution;
 
   info->width = resolution.getWidth();
@@ -392,42 +386,7 @@ minicap_try_get_display_info(int32_t displayId, Minicap::DisplayInfo* info) {
   info->ydpi = dConfig.yDpi;
   info->secure = dInfo.secure;
   info->size = sqrt(pow(resolution.getWidth() / dConfig.xDpi, 2) + pow(resolution.getHeight() / dConfig.yDpi, 2));
-#else
-  #if (PLATFORM_SDK_VERSION == 29)
-  android::sp<android::IBinder> dpy = android::SurfaceComposerClient::getPhysicalDisplayToken(displayId);
-  if(!dpy) {
-    MCINFO("could not get display for id: %d, using internal display", displayId);
-    dpy = android::SurfaceComposerClient::getInternalDisplayToken();
-  }
-  #else
-  android::sp<android::IBinder> dpy = android::SurfaceComposerClient::getBuiltInDisplay(displayId);
-  #endif /* PLATFORM_SDK_VERSION == 29 */
 
-  android::Vector<android::DisplayInfo> configs;
-  android::status_t err = android::SurfaceComposerClient::getDisplayConfigs(dpy, &configs);
-
-  if (err != android::NO_ERROR) {
-    MCERROR("SurfaceComposerClient::getDisplayInfo() failed: %s (%d)\n", error_name(err), err);
-    return err;
-  }
-
-  int activeConfig = android::SurfaceComposerClient::getActiveConfig(dpy);
-  if(static_cast<size_t>(activeConfig) >= configs.size()) {
-      MCERROR("Active config %d not inside configs (size %zu)\n", activeConfig, configs.size());
-      return android::BAD_VALUE;
-  }
-  android::DisplayInfo dinfo = configs[activeConfig];
-
-  info->width = dinfo.w;
-  info->height = dinfo.h;
-  info->orientation = dinfo.orientation;
-  info->fps = dinfo.fps;
-  info->density = dinfo.density;
-  info->xdpi = dinfo.xdpi;
-  info->ydpi = dinfo.ydpi;
-  info->secure = dinfo.secure;
-  info->size = sqrt(pow(dinfo.w / dinfo.xdpi, 2) + pow(dinfo.h / dinfo.ydpi, 2));
-#endif /* PLATFORM_SDK_VERSION == 30 */
   return 0;
 }
 

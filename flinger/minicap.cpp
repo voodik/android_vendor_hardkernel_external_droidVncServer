@@ -262,7 +262,7 @@ private:
     MCINFO("Creating virtual display");
     mVirtualDisplay = android::SurfaceComposerClient::createDisplay(
       /* const String8& displayName */  android::String8("minicap"),
-      /* bool secure */                 true
+      /* bool secure */                 false
     );
 
     MCINFO("Creating buffer queue");

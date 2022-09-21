@@ -20,15 +20,11 @@
 
 #include <private/gui/ComposerService.h>
 
-#include <ui/StaticDisplayInfo.h>
-#include <ui/DisplayMode.h>
+#include <ui/DisplayInfo.h>
+#include <ui/DisplayConfig.h>
+#include <ui/DisplayState.h>
 #include <ui/PixelFormat.h>
 #include <ui/Rect.h>
-#include <input/DisplayViewport.h>
-#include <ui/Rotation.h>
-#include <ui/Size.h>
-#include <ui/DisplayState.h>
-
 
 #include "mcdebug.h"
 
@@ -284,7 +280,7 @@ private:
     android::SurfaceComposerClient::Transaction t;
     t.setDisplaySurface(mVirtualDisplay, mBufferProducer);
     t.setDisplayProjection(mVirtualDisplay,
-      android::ui::toRotation(android::DISPLAY_ORIENTATION_0), layerStackRect, visibleRect);
+      android::ui::ROTATION_0, layerStackRect, visibleRect);
     t.setDisplayLayerStack(mVirtualDisplay, 0); // default stack
     t.apply();
 
@@ -347,45 +343,44 @@ private:
 
 int
 minicap_try_get_display_info(int32_t displayId, Minicap::DisplayInfo* info) {
-
-  android::sp<android::IBinder> dpy = android::SurfaceComposerClient::getInternalDisplayToken();
-
-  android::ui::StaticDisplayInfo dInfo;
-  android::status_t getInfoError = android::SurfaceComposerClient::getStaticDisplayInfo(dpy, &dInfo);
-
-
-  if (getInfoError != android::NO_ERROR) {
-     MCERROR("SurfaceComposerClient::getStaticDisplayInfo() failed: %s (%d)\n", error_name(getInfoError), getInfoError);
-     return getInfoError;
+  android::status_t err;
+  android::sp<android::IBinder> dpy = android::SurfaceComposerClient::getPhysicalDisplayToken(displayId);
+  if(!dpy) {
+    MCINFO("could not get display for id: %d, using internal display", displayId);
+    dpy = android::SurfaceComposerClient::getInternalDisplayToken();
   }
 
-
-  android::ui::DisplayMode dConfig;
-  android::status_t err = android::SurfaceComposerClient::getActiveDisplayMode(dpy, &dConfig);
+  android::DisplayInfo dinfo;
+  err = android::SurfaceComposerClient::getDisplayInfo(dpy, &dinfo);
   if (err != android::NO_ERROR) {
-     MCERROR("SurfaceComposerClient::getActiveDisplayMode() failed: %s (%d)\n", error_name(err), err);
-     return err;
+    MCERROR("SurfaceComposerClient::getDisplayInfo() failed: %s (%d)\n", error_name(err), err);
+    return err;
   }
 
-  android::ui::DisplayState displayState;
-  android::status_t displayStateErr = android::SurfaceComposerClient::getDisplayState(dpy, &displayState);
-  if (displayStateErr != android::NO_ERROR) {
-     MCERROR("SurfaceComposerClient::getDisplayInfo() failed: %s (%d)\n", error_name(displayStateErr), displayStateErr);
-     return displayStateErr;
+  android::ui::DisplayState dstate;
+  err = android::SurfaceComposerClient::getDisplayState(dpy, &dstate);
+  if (err !=  android::NO_ERROR) {
+    MCERROR("SurfaceComposerClient:::getDisplayState() failed: %s (%d)\n", error_name(err), err);
+    return err;
   }
 
+  android::DisplayConfig dconfig;
+  err = android::SurfaceComposerClient::getActiveDisplayConfig(dpy, &dconfig);
+  if (err !=  android::NO_ERROR) {
+    MCERROR("SurfaceComposerClient::getActiveDisplayConfig() failed: %s (%d)\n", error_name(err), err);
+    return err;
+  }
 
-  android::ui::Size& resolution = dConfig.resolution;
-
-  info->width = resolution.getWidth();
-  info->height = resolution.getHeight();
-  info->orientation = android::ui::toRotationInt(displayState.orientation);
-  info->fps = dConfig.refreshRate;
-  info->density = dInfo.density;
-  info->xdpi = dConfig.xDpi;
-  info->ydpi = dConfig.yDpi;
-  info->secure = dInfo.secure;
-  info->size = sqrt(pow(resolution.getWidth() / dConfig.xDpi, 2) + pow(resolution.getHeight() / dConfig.yDpi, 2));
+  const android::ui::Size& viewport = dstate.viewport;
+  info->width = viewport.getWidth();
+  info->height = viewport.getHeight();
+  info->orientation = android::ui::toRotationInt(dstate.orientation);
+  info->fps = dconfig.refreshRate;
+  info->density = dinfo.density;
+  info->xdpi = dconfig.xDpi;
+  info->ydpi = dconfig.yDpi;
+  info->secure = dinfo.secure;
+  info->size = sqrt(pow(viewport.getWidth() / dconfig.xDpi, 2) + pow(viewport.getWidth() / dconfig.yDpi, 2));
 
   return 0;
 }
